@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Folienuhr – PowerPoint-Inhalts-Add-in (Uhrzeit, Countdown, Stoppuhr, Countdown bis Uhrzeit)
+
+  Gehostet über GitHub Pages: https://github.com/bartlog/pptxtimer
+  Bei anderer Adresse IconUrl, HighResolutionIconUrl, SourceLocation und AppDomain anpassen.
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:type="ContentApp">
+
+  <Id>22b5d240-91bd-4333-a37b-794fd44e3aa7</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Heiko Bartlog</ProviderName>
+  <DefaultLocale>de-DE</DefaultLocale>
+  <DisplayName DefaultValue="Folienuhr" />
+  <Description DefaultValue="Live-Uhrzeit, Countdown und Stoppuhr direkt auf der Folie – läuft in der Bildschirmpräsentation weiter." />
+  <IconUrl DefaultValue="https://bartlog.github.io/pptxtimer/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://bartlog.github.io/pptxtimer/assets/icon-80.png" />
+  <SupportUrl DefaultValue="https://bartlog.de" />
+
+  <AppDomains>
+    <AppDomain>https://bartlog.github.io</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Presentation" />
+  </Hosts>
+
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://bartlog.github.io/pptxtimer/index.html" />
+    <RequestedWidth>520</RequestedWidth>
+    <RequestedHeight>240</RequestedHeight>
+  </DefaultSettings>
+
+  <Permissions>ReadWriteDocument</Permissions>
+  <AllowSnapshot>true</AllowSnapshot>
+</OfficeApp>

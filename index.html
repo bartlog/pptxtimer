@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Folienuhr</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Roboto+Condensed:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Roboto+Slab:wght@300;400;500;700&family=Literata:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Outfit:wght@300;400;500;700&display=swap">
+<style>
+  :root {
+    --fg: #1B2835;
+    --bg: #F9F5EC;
+    --accent: #236292;
+    --warn: #B8322A;
+    --ui-bg: #FBF8F1;
+    --ui-ink: #1B2835;
+    --ui-muted: #5B6672;
+    --ui-line: #E3DBCB;
+    --ui-accent: #236292;
+    --readout-font: "Roboto Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+    --readout-weight: 500;
+    --readout-style: normal;
+    --dw: .6em;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--fg);
+    font-family: "Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.transparent, html.transparent { background: transparent; }
+
+  /* ---------- Anzeige ---------- */
+  #stage {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 4% 5%;
+    user-select: none; cursor: default;
+  }
+  body[data-align="left"] #stage { align-items: flex-start; }
+  body[data-align="right"] #stage { align-items: flex-end; }
+  body.interactive #stage { cursor: pointer; }
+
+  #label, #meta {
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.15; font-weight: 400; letter-spacing: .01em;
+    font-family: var(--readout-font); font-style: var(--readout-style); font-synthesis: style;
+    color: var(--fg); opacity: .78;
+  }
+  #label:empty, #meta:empty { display: none; }
+  #readout {
+    font-family: var(--readout-font);
+    font-weight: var(--readout-weight);
+    font-style: var(--readout-style);
+    font-synthesis: style;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    line-height: .92;
+    white-space: nowrap;
+    color: var(--fg);
+    transition: color .25s ease, opacity .25s ease;
+  }
+  /* Jede Ziffer bekommt dieselbe Breite – so springt nichts, auch bei Schriften ohne Tabellenziffern. */
+  #readout .d { display: inline-block; width: var(--dw); text-align: center; }
+  body.warn #readout { color: var(--warn); }
+  body.over #readout { color: var(--warn); }
+  body.paused #readout { opacity: .5; }
+  #measure {
+    position: absolute; visibility: hidden; white-space: nowrap; left: -9999px; top: 0;
+    font-family: var(--readout-font); font-weight: var(--readout-weight); font-style: var(--readout-style);
+    font-synthesis: style; line-height: .92;
+    font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1;
+    font-size: 100px;
+  }
+
+  #progress {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 4%; min-height: 3px; max-height: 12px;
+    background: color-mix(in srgb, var(--fg) 12%, transparent);
+    display: none;
+  }
+  body.show-progress #progress { display: block; }
+  #progress > i {
+    display: block; height: 100%; width: 100%;
+    background: var(--accent);
+    transform-origin: left center;
+  }
+  body.warn #progress > i, body.over #progress > i { background: var(--warn); }
+
+  @keyframes ended { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+  body.ended #readout { animation: ended .7s ease-in-out 3; }
+  @media (prefers-reduced-motion: reduce) {
+    body.ended #readout { animation: none; }
+    #readout { transition: none; }
+  }
+
+  /* ---------- Bedienleiste (Countdown/Stoppuhr) ---------- */
+  #controls {
+    position: absolute; right: 2%; bottom: 7%;
+    display: flex; gap: 4px;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  }
+  body.interactive.show-controls #controls { opacity: 1; pointer-events: auto; }
+  #controls button {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 0; padding: 0; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--fg) 82%, transparent);
+    color: var(--bg); cursor: pointer; font: 600 11px/1 "Roboto", system-ui, sans-serif;
+  }
+  #controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #controls svg { width: 14px; height: 14px; fill: currentColor; }
+  #btnPlus { display: none !important; }
+  body.mode-countdown #btnPlus { display: grid !important; }
+
+  /* ---------- Bearbeiten ---------- */
+  #gear {
+    position: absolute; top: 6px; right: 6px; z-index: 5;
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--ui-line);
+    background: var(--ui-bg); color: var(--ui-ink); cursor: pointer;
+    display: none; place-items: center; padding: 0;
+    opacity: .8;
+  }
+  #gear:hover, #gear:focus-visible { opacity: 1; }
+  #gear:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+  #gear svg { width: 16px; height: 16px; fill: currentColor; }
+  body[data-view="edit"] #gear { display: grid; }
+
+  #panel {
+    position: absolute; inset: 0; z-index: 10;
+    background: var(--ui-bg); color: var(--ui-ink);
+    font-size: 13px; line-height: 1.35;
+    display: none; flex-direction: column;
+  }
+  body.panel-open #panel { display: flex; }
+  #panelBody { flex: 1; overflow-y: auto; padding: 10px 12px 4px; }
+  #panelFoot {
+    display: flex; align-items: center; gap: 8px; justify-content: flex-end;
+    padding: 8px 12px; border-top: 1px solid var(--ui-line); background: var(--ui-bg);
+  }
+  #saveState { margin-right: auto; color: var(--ui-muted); font-size: 12px; }
+
+  fieldset { border: 0; margin: 0 0 12px; padding: 0; }
+  legend { font-weight: 500; font-size: 13px; margin: 0 0 6px; padding: 0; }
+  .row {
+    display: grid; grid-template-columns: minmax(96px, 38%) 1fr; align-items: center;
+    gap: 8px; margin-bottom: 6px;
+  }
+  .row > label:first-child, .row > .rowlabel { color: var(--ui-muted); }
+  .hint { color: var(--ui-muted); font-size: 12px; margin: 2px 0 8px; }
+
+  .seg { display: flex; flex-wrap: wrap; border: 1px solid var(--ui-line); border-radius: 6px; overflow: hidden; }
+  .seg button {
+    flex: 1 1 auto; border: 0; background: transparent; color: var(--ui-ink);
+    font: 500 12.5px/1 "Roboto", system-ui, sans-serif; padding: 8px 8px; cursor: pointer;
+    border-right: 1px solid var(--ui-line);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--ui-accent); color: #fff; }
+  .seg button:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -3px; }
+
+  input[type="text"], input[type="number"], input[type="time"], select {
+    font: 400 13px/1.2 "Roboto", system-ui, sans-serif; color: var(--ui-ink);
+    background: #fff; border: 1px solid var(--ui-line); border-radius: 5px;
+    padding: 5px 7px; width: 100%; min-width: 0;
+  }
+  input:focus-visible, select:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 0; border-color: transparent; }
+  .pair { display: flex; align-items: center; gap: 6px; }
+  .pair input { width: 64px; }
+  .pair span { color: var(--ui-muted); }
+  .check { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; cursor: pointer; }
+  .check input { accent-color: var(--ui-accent); width: 15px; height: 15px; margin: 0; }
+
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .swatch {
+    width: 44px; height: 30px; border-radius: 5px; cursor: pointer; padding: 0;
+    border: 1px solid var(--ui-line); display: grid; place-items: center;
+    font: 500 13px/1 "Roboto Condensed", system-ui, sans-serif;
+  }
+  .swatch[aria-pressed="true"] { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+  .swatch:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+  .colors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .colors label { display: flex; flex-direction: column; gap: 3px; color: var(--ui-muted); font-size: 12px; }
+  .colors input[type="color"] { width: 100%; height: 26px; border: 1px solid var(--ui-line); border-radius: 5px; padding: 1px; background: #fff; }
+
+  .btn {
+    font: 500 13px/1 "Roboto", system-ui, sans-serif; border-radius: 6px; cursor: pointer;
+    padding: 8px 14px; border: 1px solid var(--ui-line); background: #fff; color: var(--ui-ink);
+  }
+  .btn.primary { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }
+  .btn:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+  #btnPreview { display: none; }
+  body.browser #btnPreview { display: inline-block; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body data-view="edit" data-align="center">
+
+  <div id="stage" aria-live="off">
+    <div id="label"></div>
+    <div id="readout">--:--</div>
+    <div id="meta"></div>
+  </div>
+  <span id="measure" aria-hidden="true"></span>
+  <div id="progress" aria-hidden="true"><i></i></div>
+
+  <div id="controls">
+    <button id="btnToggle" type="button" aria-label="Start">
+      <svg id="icoPlay" viewBox="0 0 16 16"><path d="M4 2.5v11l9.5-5.5z"/></svg>
+      <svg id="icoPause" viewBox="0 0 16 16" hidden><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>
+    </button>
+    <button id="btnReset" type="button" aria-label="Zurücksetzen">
+      <svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 1 1-5.2 7.3l1.6-.5A3.8 3.8 0 1 0 8 4.2V6L4.6 3.4 8 .8z"/></svg>
+    </button>
+    <button id="btnPlus" type="button" aria-label="Eine Minute hinzufügen">+1</button>
+  </div>
+
+  <button id="gear" type="button" aria-label="Einstellungen öffnen" title="Einstellungen">
+    <svg viewBox="0 0 16 16"><path d="M9.4 1l.4 1.9c.4.2.8.4 1.1.6l1.8-.7 1.4 2.4-1.5 1.3a4.6 4.6 0 0 1 0 1.3l1.5 1.3-1.4 2.4-1.8-.7c-.3.2-.7.5-1.1.6L9.4 15H6.6l-.4-1.9c-.4-.2-.8-.4-1.1-.6l-1.8.7-1.4-2.4 1.5-1.3a4.6 4.6 0 0 1 0-1.3L1.9 6.9l1.4-2.4 1.8.7c.3-.2.7-.5 1.1-.6L6.6 1zM8 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg>
+  </button>
+
+  <form id="panel" onsubmit="return false" aria-label="Einstellungen">
+    <div id="panelBody">
+      <fieldset>
+        <legend>Was soll angezeigt werden?</legend>
+        <div class="seg" id="modeSeg" role="group" aria-label="Anzeige">
+          <button type="button" data-mode="clock">Uhrzeit</button>
+          <button type="button" data-mode="countdown">Countdown</button>
+          <button type="button" data-mode="until">Bis Uhrzeit</button>
+          <button type="button" data-mode="stopwatch">Stoppuhr</button>
+        </div>
+      </fieldset>
+
+      <fieldset data-for="clock">
+        <label class="check"><input type="checkbox" id="clockSeconds"> Sekunden anzeigen</label>
+        <label class="check"><input type="checkbox" id="clockDate"> Datum darunter anzeigen</label>
+      </fieldset>
+
+      <fieldset data-for="countdown">
+        <div class="row">
+          <label for="durMin">Dauer</label>
+          <div class="pair">
+            <input type="number" id="durMin" min="0" max="999" step="1" aria-label="Minuten"><span>min</span>
+            <input type="number" id="durSec" min="0" max="59" step="5" aria-label="Sekunden"><span>s</span>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset data-for="until">
+        <div class="row">
+          <label for="untilTime">Endet um</label>
+          <input type="time" id="untilTime" step="60">
+        </div>
+        <p class="hint">Läuft von selbst, ohne Start. Praktisch für Pausen: „Weiter geht’s um 10:30“.</p>
+      </fieldset>
+
+      <fieldset data-for="countdown until">
+        <div class="row">
+          <label for="warnSec">Warnfarbe ab</label>
+          <div class="pair"><input type="number" id="warnSec" min="0" max="3600" step="10"><span>Sekunden vor Ende</span></div>
+        </div>
+        <label class="check"><input type="checkbox" id="overtime"> Nach Ablauf ins Minus weiterzählen</label>
+        <label class="check"><input type="checkbox" id="sound"> Signalton bei Ablauf</label>
+      </fieldset>
+
+      <fieldset data-for="countdown stopwatch">
+        <label class="check"><input type="checkbox" id="autostart"> Automatisch starten, wenn die Folie erscheint</label>
+        <label class="check" data-for="countdown"><input type="checkbox" id="progressOn"> Fortschrittsbalken</label>
+        <p class="hint">In der Präsentation: klicken startet und pausiert, Doppelklick setzt zurück.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Beschriftung</legend>
+        <input type="text" id="labelInput" maxlength="60" placeholder="optional, z. B. Kaffeepause" aria-label="Beschriftung über der Anzeige" data-field="label">
+      </fieldset>
+
+      <fieldset>
+        <legend>Farben</legend>
+        <div class="swatches" id="themeSwatches" role="group" aria-label="Farbschema"></div>
+        <div class="colors" id="customColors">
+          <label>Schrift<input type="color" id="cFg"></label>
+          <label>Hintergrund<input type="color" id="cBg"></label>
+          <label>Balken<input type="color" id="cAccent"></label>
+          <label>Warnung<input type="color" id="cWarn"></label>
+        </div>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="transparent"> Hintergrund transparent (falls PowerPoint das unterstützt)</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Schrift und Ausrichtung</legend>
+        <div class="row">
+          <label for="font">Schriftart</label>
+          <select id="font">
+            <option value="system">Systemschrift</option>
+            <option value="roboto-condensed">Roboto Condensed</option>
+            <option value="roboto-mono">Roboto Mono</option>
+            <option value="roboto-slab">Roboto Slab</option>
+            <option value="roboto">Roboto</option>
+            <option value="literata">Literata</option>
+            <option value="outfit">Outfit</option>
+          </select>
+        </div>
+        <div class="row">
+          <span class="rowlabel">Stärke</span>
+          <div class="seg" id="weightSeg" role="group" aria-label="Schriftstärke">
+            <button type="button" data-weight="300" style="font-weight:300">Light</button>
+            <button type="button" data-weight="400" style="font-weight:400">Normal</button>
+            <button type="button" data-weight="500" style="font-weight:500">Medium</button>
+            <button type="button" data-weight="700" style="font-weight:700">Bold</button>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="italic"> Kursiv</label>
+        <p class="hint" id="italicHint" hidden>Diese Schrift hat keine echte Kursive – sie wird schräg gestellt.</p>
+        <div class="row">
+          <label for="align">Ausrichtung</label>
+          <select id="align">
+            <option value="center">Zentriert</option>
+            <option value="left">Links</option>
+            <option value="right">Rechts</option>
+          </select>
+        </div>
+      </fieldset>
+    </div>
+    <div id="panelFoot">
+      <span id="saveState" role="status"></span>
+      <button type="button" class="btn" id="btnPreview">Präsentationsansicht testen</button>
+      <button type="button" class="btn primary" id="btnDone">Fertig</button>
+    </div>
+  </form>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================= Konfiguration ================= */
+  const THEMES = {
+    hell:   { name: "Hell",   fg: "#1B2835", bg: "#F9F5EC", accent: "#236292", warn: "#B8322A" },
+    weiss:  { name: "Weiß",   fg: "#1B2835", bg: "#FFFFFF", accent: "#236292", warn: "#B8322A" },
+    dunkel: { name: "Dunkel", fg: "#F9F5EC", bg: "#1B2835", accent: "#7FB2D9", warn: "#FF8A7A" },
+    blau:   { name: "Blau",   fg: "#FFFFFF", bg: "#236292", accent: "#F9F5EC", warn: "#FFD166" }
+  };
+  const DEFAULTS = {
+    v: 1,
+    mode: "clock",
+    clockSeconds: true,
+    clockDate: false,
+    durationMin: 5,
+    durationSec: 0,
+    untilTime: "10:30",
+    warnSec: 60,
+    overtime: true,
+    sound: false,
+    autostart: true,
+    progress: true,
+    label: "",
+    theme: "hell",
+    fg: THEMES.hell.fg, bg: THEMES.hell.bg, accent: THEMES.hell.accent, warn: THEMES.hell.warn,
+    transparent: false,
+    font: "roboto-condensed",
+    weight: 500,
+    italic: false,
+    align: "center",
+    slideId: null
+  };
+  // italic: false = Schrift hat keine echte Kursive, der Browser stellt sie schräg.
+  const FONTS = {
+    "system":           { stack: '"Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif', italic: true, family: null },
+    "roboto-condensed": { stack: '"Roboto Condensed", "Arial Narrow", sans-serif', italic: true,  family: "Roboto Condensed" },
+    "roboto-mono":      { stack: '"Roboto Mono", "Consolas", "Menlo", monospace',  italic: true,  family: "Roboto Mono" },
+    "roboto-slab":      { stack: '"Roboto Slab", Rockwell, Georgia, serif',        italic: false, family: "Roboto Slab" },
+    "roboto":           { stack: '"Roboto", "Segoe UI", Arial, sans-serif',        italic: true,  family: "Roboto" },
+    "literata":         { stack: 'Literata, Georgia, "Times New Roman", serif',     italic: true,  family: "Literata" },
+    "outfit":           { stack: 'Outfit, "Segoe UI", Arial, sans-serif',           italic: false, family: "Outfit" }
+  };
+  const LEGACY_FONTS = { condensed: "roboto-condensed", sans: "system", serif: "literata" };
+  const WEIGHTS = [300, 400, 500, 700];
+
+  let state = Object.assign({}, DEFAULTS);
+  let inOffice = false;
+  let view = "edit";
+
+  const $ = (id) => document.getElementById(id);
+  const body = document.body;
+  const el = {
+    stage: $("stage"), label: document.querySelector("#stage #label"), readout: $("readout"), meta: $("meta"),
+    measure: $("measure"), bar: document.querySelector("#progress > i"),
+    btnToggle: $("btnToggle"), icoPlay: $("icoPlay"), icoPause: $("icoPause"),
+    btnReset: $("btnReset"), btnPlus: $("btnPlus"),
+    gear: $("gear"), panel: $("panel"), saveState: $("saveState")
+  };
+
+  /* ================= Speicher ================= */
+  function loadState() {
+    let saved = null;
+    if (inOffice) {
+      try { saved = Office.context.document.settings.get("folienuhr"); } catch (e) { saved = null; }
+    } else {
+      try { saved = JSON.parse(localStorage.getItem("folienuhr") || "null"); } catch (e) { saved = null; }
+    }
+    if (saved && typeof saved === "object") state = Object.assign({}, DEFAULTS, saved);
+    if (LEGACY_FONTS[state.font]) state.font = LEGACY_FONTS[state.font];
+    if (!FONTS[state.font]) state.font = DEFAULTS.font;
+    if (!WEIGHTS.includes(+state.weight)) state.weight = DEFAULTS.weight;
+    return !!saved;
+  }
+
+  let saveTimer = null;
+  function saveState() {
+    clearTimeout(saveTimer);
+    el.saveState.textContent = "";
+    saveTimer = setTimeout(() => {
+      if (inOffice) {
+        try {
+          Office.context.document.settings.set("folienuhr", state);
+          Office.context.document.settings.saveAsync((r) => {
+            el.saveState.textContent = r.status === Office.AsyncResultStatus.Succeeded
+              ? "Gespeichert" : "Speichern fehlgeschlagen – Datei speichern und erneut versuchen";
+          });
+        } catch (e) { el.saveState.textContent = "Speichern fehlgeschlagen"; }
+      } else {
+        try { localStorage.setItem("folienuhr", JSON.stringify(state)); el.saveState.textContent = "Gespeichert (Browser-Vorschau)"; }
+        catch (e) { el.saveState.textContent = "Nur für diese Sitzung"; }
+      }
+    }, 350);
+  }
+
+  /* ================= Timer ================= */
+  const timer = { running: false, startedAt: 0, before: 0, extraMs: 0, endedFired: false };
+  const elapsed = () => timer.before + (timer.running ? Date.now() - timer.startedAt : 0);
+
+  function start() {
+    if (timer.running) return;
+    if (state.mode === "countdown" && !state.overtime && remainingCountdown() <= 0) reset();
+    timer.running = true; timer.startedAt = Date.now();
+    unlockAudio();
+    tick(true);
+  }
+  function pause() {
+    if (!timer.running) return;
+    timer.before = elapsed(); timer.running = false;
+    tick(true);
+  }
+  function reset() {
+    timer.running = false; timer.before = 0; timer.extraMs = 0; timer.endedFired = false;
+    body.classList.remove("ended");
+    tick(true);
+  }
+  const toggle = () => (timer.running ? pause() : start());
+  function addMinute() {
+    timer.extraMs += 60000;
+    if (remainingCountdown() > 0) { timer.endedFired = false; body.classList.remove("ended"); }
+    tick(true);
+  }
+
+  const totalCountdownMs = () =>
+    (Math.max(0, +state.durationMin || 0) * 60 + Math.max(0, +state.durationSec || 0)) * 1000 + timer.extraMs;
+  const remainingCountdown = () => totalCountdownMs() - elapsed();
+
+  function remainingUntil() {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(state.untilTime || "");
+    if (!m) return 0;
+    const now = new Date();
+    const target = new Date(now); target.setHours(+m[1], +m[2], 0, 0);
+    let diff = target - now;
+    if (diff < -12 * 3600e3) diff += 24 * 3600e3;   // z. B. 23:50 → Ziel 00:10
+    if (diff > 12 * 3600e3) diff -= 24 * 3600e3;
+    return diff;
+  }
+
+  /* ================= Formatierung ================= */
+  const pad = (n) => String(n).padStart(2, "0");
+  function fmtDuration(sec) {
+    const neg = sec < 0; let s = Math.abs(sec);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    const str = h ? `${h}:${pad(m)}:${pad(r)}` : `${m}:${pad(r)}`;
+    return (neg ? "\u2212" : "") + str;
+  }
+  // Countdown-Sekunden: oben aufrunden, damit „5:00“ die erste volle Sekunde steht.
+  const countdownSeconds = (ms) => (ms > 0 ? Math.ceil(ms / 1000) : -Math.floor(-ms / 1000));
+
+  /* ================= Audio ================= */
+  let actx = null;
+  function unlockAudio() {
+    if (!state.sound) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === "suspended") actx.resume();
+    } catch (e) { actx = null; }
+  }
+  function chime() {
+    if (!state.sound) return;
+    unlockAudio(); if (!actx) return;
+    const t0 = actx.currentTime + 0.02;
+    [0, 0.26, 0.52].forEach((d, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = i === 2 ? 1046.5 : 880;
+      g.gain.setValueAtTime(0.0001, t0 + d);
+      g.gain.exponentialRampToValueAtTime(0.3, t0 + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.24);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t0 + d); o.stop(t0 + d + 0.26);
+    });
+  }
+
+  /* ================= Darstellung ================= */
+  let lastText = null, lastLabel = null, lastMeta = null;
+
+  function tick(force) {
+    const mode = state.mode;
+    let text = "", meta = "", warn = false, over = false, paused = false, progress = null;
+
+    if (mode === "clock") {
+      const d = new Date();
+      text = `${pad(d.getHours())}:${pad(d.getMinutes())}` + (state.clockSeconds ? `:${pad(d.getSeconds())}` : "");
+      if (state.clockDate) meta = d.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+    } else if (mode === "countdown") {
+      let rem = remainingCountdown();
+      if (rem <= 0 && !state.overtime) {
+        rem = 0;
+        if (timer.running) { timer.before = totalCountdownMs(); timer.running = false; }
+      }
+      text = fmtDuration(countdownSeconds(rem));
+      warn = rem > 0 && rem <= (+state.warnSec || 0) * 1000;
+      over = rem <= 0 && elapsed() > 0;
+      paused = !timer.running && elapsed() > 0 && rem > 0;
+      const total = totalCountdownMs();
+      progress = total > 0 ? Math.max(0, Math.min(1, rem / total)) : 0;
+      if (over && !timer.endedFired) fireEnded();
+    } else if (mode === "until") {
+      let rem = remainingUntil();
+      if (rem <= 0 && !state.overtime) rem = 0;
+      text = fmtDuration(countdownSeconds(rem));
+      meta = `bis ${state.untilTime} Uhr`;
+      warn = rem > 0 && rem <= (+state.warnSec || 0) * 1000;
+      over = rem <= 0;
+      if (over && !timer.endedFired && view === "read") fireEnded();
+      if (!over) timer.endedFired = false;
+    } else { // stopwatch
+      text = fmtDuration(Math.floor(elapsed() / 1000));
+      paused = !timer.running && elapsed() > 0;
+    }
+
+    body.classList.toggle("warn", warn);
+    body.classList.toggle("over", over);
+    body.classList.toggle("paused", paused);
+    body.classList.toggle("show-progress", mode === "countdown" && !!state.progress);
+    if (progress !== null) el.bar.style.transform = `scaleX(${progress})`;
+
+    const label = state.label || "";
+    let refit = !!force;
+    if (label !== lastLabel) { el.label.textContent = label; lastLabel = label; refit = true; }
+    if (meta !== lastMeta) { el.meta.textContent = meta; if (!!meta !== !!lastMeta) refit = true; lastMeta = meta; }
+    if (text !== lastText) {
+      if (lastText === null || text.replace(/\d/g, "0") !== lastText.replace(/\d/g, "0")) refit = true;
+      el.readout.innerHTML = text.replace(/[&<>]/g, "").replace(/\d/g, (d) => `<span class="d">${d}</span>`);
+      lastText = text;
+    }
+    if (refit) fit();
+
+    const interactive = mode === "countdown" || mode === "stopwatch";
+    el.icoPlay.toggleAttribute("hidden", timer.running); el.icoPause.toggleAttribute("hidden", !timer.running);
+    el.btnToggle.setAttribute("aria-label", timer.running ? "Pause" : "Start");
+    body.classList.toggle("interactive", interactive);
+  }
+
+  function fireEnded() {
+    timer.endedFired = true;
+    body.classList.remove("ended"); void body.offsetWidth; body.classList.add("ended");
+    chime();
+  }
+
+  // Schriftgröße so wählen, dass die Anzeige den Platz füllt, ohne überzulaufen.
+  function fit() {
+    const W = el.stage.clientWidth, H = el.stage.clientHeight;
+    if (!W || !H) return;
+    const padX = W * 0.1, padY = H * 0.08;
+    const hasLabel = !!state.label, hasMeta = !!lastMeta;
+    const sideSize = Math.max(10, Math.min(H * 0.14, W * 0.07));
+    el.label.style.fontSize = el.meta.style.fontSize = sideSize + "px";
+    const sideH = (hasLabel ? sideSize * 1.25 : 0) + (hasMeta ? sideSize * 1.25 : 0);
+    const progH = body.classList.contains("show-progress") ? Math.min(12, Math.max(3, H * 0.04)) : 0;
+
+    const tpl = lastText || "00:00";
+    const digits = (tpl.match(/\d/g) || []).length;
+    el.measure.textContent = tpl.replace(/\d/g, "");
+    const w100 = (tpl.replace(/\d/g, "") ? el.measure.getBoundingClientRect().width : 0) + digits * digitWidth100 || 1;
+    const availW = (W - padX) * (state.italic ? 0.93 : 1), availH = H - padY - sideH - progH;   // Kursive ragt über die Laufweite hinaus
+    const size = Math.max(8, Math.min((availW / w100) * 100, availH / 0.95));
+    el.readout.style.fontSize = size.toFixed(1) + "px";
+  }
+
+  let digitWidth100 = 60;
+  function measureDigits() {
+    let max = 0;
+    for (let i = 0; i <= 9; i++) {
+      el.measure.textContent = String(i);
+      max = Math.max(max, el.measure.getBoundingClientRect().width);
+    }
+    digitWidth100 = max || 60;
+    document.documentElement.style.setProperty("--dw", (digitWidth100 / 100).toFixed(4) + "em");
+  }
+  function fontChanged() {
+    measureDigits(); fit();
+    const f = FONTS[state.font];
+    if (f && f.family && document.fonts && document.fonts.load) {
+      const spec = `${state.italic ? "italic" : "normal"} ${state.weight} 100px "${f.family}"`;
+      document.fonts.load(spec, "0123456789:").then(() => { measureDigits(); fit(); }).catch(() => {});
+    }
+  }
+
+  function applyLook() {
+    const t = state.theme !== "eigenes" && THEMES[state.theme];
+    const c = t || state;
+    const root = document.documentElement.style;
+    root.setProperty("--fg", c.fg); root.setProperty("--bg", c.bg);
+    root.setProperty("--accent", c.accent); root.setProperty("--warn", c.warn);
+    root.setProperty("--readout-font", (FONTS[state.font] || FONTS[DEFAULTS.font]).stack);
+    root.setProperty("--readout-weight", String(state.weight));
+    root.setProperty("--readout-style", state.italic ? "italic" : "normal");
+    document.documentElement.classList.toggle("transparent", !!state.transparent);
+    body.classList.toggle("transparent", !!state.transparent);
+    body.dataset.align = state.align;
+    ["clock", "countdown", "until", "stopwatch"].forEach((m) => body.classList.toggle("mode-" + m, state.mode === m));
+    fontChanged();
+    tick(true);
+  }
+
+  /* ================= Einstellungen ================= */
+  const fields = {
+    clockSeconds: "checked", clockDate: "checked", durMin: "value", durSec: "value", untilTime: "value",
+    warnSec: "value", overtime: "checked", sound: "checked", autostart: "checked", progressOn: "checked",
+    transparent: "checked", italic: "checked", font: "value", align: "value", cFg: "value", cBg: "value", cAccent: "value", cWarn: "value"
+  };
+  const keyOf = { durMin: "durationMin", durSec: "durationSec", progressOn: "progress", cFg: "fg", cBg: "bg", cAccent: "accent", cWarn: "warn" };
+  const labelInput = document.querySelector('#panel [data-field="label"]');
+
+  function buildSwatches() {
+    const wrap = $("themeSwatches");
+    Object.entries(THEMES).forEach(([key, t]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "swatch"; b.dataset.theme = key;
+      b.style.background = t.bg; b.style.color = t.fg; b.textContent = "9:41";
+      b.title = t.name; b.setAttribute("aria-label", "Farbschema " + t.name);
+      wrap.appendChild(b);
+    });
+    const own = document.createElement("button");
+    own.type = "button"; own.className = "swatch"; own.dataset.theme = "eigenes";
+    own.textContent = "Eigene"; own.style.width = "60px"; own.style.background = "#fff"; own.style.color = "#1B2835";
+    own.style.fontFamily = "Roboto, system-ui, sans-serif"; own.style.fontWeight = "500"; own.style.fontSize = "12px";
+    wrap.appendChild(own);
+    wrap.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-theme]"); if (!b) return;
+      if (b.dataset.theme === "eigenes" && state.theme !== "eigenes" && THEMES[state.theme]) {
+        Object.assign(state, { fg: THEMES[state.theme].fg, bg: THEMES[state.theme].bg, accent: THEMES[state.theme].accent, warn: THEMES[state.theme].warn });
+      }
+      state.theme = b.dataset.theme; changed();
+    });
+  }
+
+  function syncPanel() {
+    Object.entries(fields).forEach(([id, prop]) => { const k = keyOf[id] || id; $(id)[prop] = state[k]; });
+    labelInput.value = state.label;
+    document.querySelectorAll("#modeSeg [data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+    document.querySelectorAll("#themeSwatches [data-theme]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.theme === state.theme)));
+    $("customColors").hidden = state.theme !== "eigenes";
+    document.querySelectorAll("#weightSeg [data-weight]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.weight === +state.weight)));
+    $("italicHint").hidden = !(state.italic && FONTS[state.font] && !FONTS[state.font].italic);
+    document.querySelectorAll("#panel [data-for]").forEach((f) => { f.hidden = !f.dataset.for.split(" ").includes(state.mode); });
+  }
+
+  function changed() { syncPanel(); applyLook(); saveState(); }
+
+  function readPanel(e) {
+    const id = e.target.id;
+    if (e.target === labelInput) { state.label = labelInput.value; changed(); return; }
+    if (!(id in fields)) return;
+    const k = keyOf[id] || id, prop = fields[id];
+    let v = e.target[prop];
+    if (["durationMin", "durationSec", "warnSec"].includes(k)) v = Math.max(0, parseInt(v, 10) || 0);
+    if (k === "durationSec") v = Math.min(59, v);
+    state[k] = v;
+    if (k === "durationMin" || k === "durationSec") reset();
+    changed();
+  }
+
+  function openPanel() {
+    if (view !== "edit") return;
+    rememberSlide();
+    syncPanel(); body.classList.add("panel-open");
+    setTimeout(() => { const b = document.querySelector('#modeSeg [aria-pressed="true"]'); b && b.focus(); }, 0);
+  }
+  function closePanel() { body.classList.remove("panel-open"); el.gear.focus({ preventScroll: true }); requestAnimationFrame(() => fit()); }
+
+  /* ================= Folien- und Ansichtserkennung ================= */
+  function getCurrentSlide(cb) {
+    if (!inOffice) return cb(null);
+    try {
+      Office.context.document.getSelectedDataAsync(Office.CoercionType.SlideRange, (r) => {
+        const s = r.status === Office.AsyncResultStatus.Succeeded && r.value && r.value.slides && r.value.slides[0];
+        cb(s || null);
+      });
+    } catch (e) { cb(null); }
+  }
+  // Beim Bearbeiten ist die markierte Folie die Folie, auf der dieses Add-in liegt.
+  function rememberSlide() {
+    getCurrentSlide((s) => { if (s && String(s.id) !== String(state.slideId)) { state.slideId = s.id; saveState(); } });
+  }
+
+  let slidePoll = null, wasHere = false, slideApiWorks = false, fallbackUsed = false;
+  function onSlideEnter() {
+    if (!state.autostart) return;
+    if (state.mode !== "countdown" && state.mode !== "stopwatch") return;
+    const finished = state.mode === "countdown" && remainingCountdown() <= 0;
+    if (!timer.running && (elapsed() === 0 || finished)) { reset(); start(); }
+  }
+  function watchSlides() {
+    stopWatching();
+    wasHere = false; fallbackUsed = false;
+    if (!inOffice) { onSlideEnter(); return; }
+    const check = () => getCurrentSlide((s) => {
+      if (!s) {
+        if (!slideApiWorks && !fallbackUsed) { fallbackUsed = true; onSlideEnter(); }
+        return;
+      }
+      slideApiWorks = true;
+      const here = state.slideId == null || String(s.id) === String(state.slideId);
+      if (here && !wasHere) onSlideEnter();
+      wasHere = here;
+    });
+    check();
+    slidePoll = setInterval(check, 400);
+  }
+  function stopWatching() { if (slidePoll) clearInterval(slidePoll); slidePoll = null; }
+
+  function setView(v) {
+    const next = v === "read" ? "read" : "edit";
+    if (next === view && body.dataset.view === next) return;
+    view = next; body.dataset.view = view;
+    if (view === "read") { body.classList.remove("panel-open"); reset(); watchSlides(); }
+    else { stopWatching(); reset(); }
+    requestAnimationFrame(() => fit());
+  }
+
+  /* ================= Ereignisse ================= */
+  function wire() {
+    el.gear.addEventListener("click", openPanel);
+    $("btnDone").addEventListener("click", closePanel);
+    $("btnPreview").addEventListener("click", () => setView("read"));
+    el.panel.addEventListener("input", readPanel);
+    el.panel.addEventListener("change", readPanel);
+    $("weightSeg").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-weight]"); if (!b) return;
+      state.weight = +b.dataset.weight; changed();
+    });
+    $("modeSeg").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-mode]"); if (!b) return;
+      state.mode = b.dataset.mode; reset(); changed();
+    });
+
+    el.btnToggle.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+    el.btnReset.addEventListener("click", (e) => { e.stopPropagation(); reset(); });
+    el.btnPlus.addEventListener("click", (e) => { e.stopPropagation(); addMinute(); });
+    ["dblclick", "mousedown"].forEach((t) => el.btnToggle.parentElement.addEventListener(t, (e) => e.stopPropagation()));
+
+    let clickT = null;
+    el.stage.addEventListener("click", () => {
+      if (state.mode !== "countdown" && state.mode !== "stopwatch") return;
+      clearTimeout(clickT); clickT = setTimeout(toggle, 230);   // kurz warten, um Doppelklick zu erkennen
+    });
+    el.stage.addEventListener("dblclick", () => { clearTimeout(clickT); reset(); });
+
+    let hideT = null;
+    const showControls = () => {
+      body.classList.add("show-controls"); clearTimeout(hideT);
+      hideT = setTimeout(() => body.classList.remove("show-controls"), 2500);
+    };
+    document.addEventListener("pointermove", showControls);
+    document.addEventListener("pointerdown", showControls);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (body.classList.contains("panel-open")) closePanel();
+        else if (!inOffice && view === "read") setView("edit");
+      }
+    });
+
+    if ("ResizeObserver" in window) new ResizeObserver(() => fit()).observe(el.stage);
+    else window.addEventListener("resize", fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureDigits(); fit(); });
+    document.addEventListener("visibilitychange", () => tick(true));
+  }
+
+  /* ================= Takt ================= */
+  function loop() {
+    tick(false);
+    let wait;
+    if (state.mode === "clock") wait = 1000 - (Date.now() % 1000) + 5;      // exakt zum Sekundenwechsel
+    else if (timer.running || state.mode === "until") wait = 100;
+    else wait = 250;
+    setTimeout(loop, wait);
+  }
+
+  /* ================= Start ================= */
+  function init(host) {
+    inOffice = !!host;
+    body.classList.toggle("browser", !inOffice);
+    const hadSettings = loadState();
+    buildSwatches(); wire(); applyLook(); syncPanel();
+    loop();
+
+    if (!inOffice) { setView("edit"); return; }
+
+    // Frisch eingefügt: Folie merken und direkt die Einstellungen zeigen.
+    const decideView = (v) => {
+      setView(v);
+      if (v !== "read" && !hadSettings) { saveState(); openPanel(); }
+    };
+    try {
+      if (Office.context.document.getActiveViewAsync) {
+        Office.context.document.getActiveViewAsync((r) => decideView(r.status === Office.AsyncResultStatus.Succeeded ? r.value : "edit"));
+      } else decideView("edit");
+      Office.context.document.addHandlerAsync(Office.EventType.ActiveViewChanged, (e) => setView(e.activeView));
+    } catch (e) { decideView("edit"); }
+  }
+
+  if (window.Office && Office.onReady) {
+    Office.onReady((info) => init(info && info.host));
+  } else {
+    // office.js nicht geladen (offline oder normale Browser-Vorschau)
+    init(null);
+  }
+})();
+</script>
+</body>
+</html>
