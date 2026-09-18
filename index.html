@@ -31,7 +31,6 @@
     font-family: "Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  body.transparent, html.transparent { background: transparent; }
 
   /* ---------- Anzeige ---------- */
   #stage {
@@ -186,10 +185,15 @@
   .colors input[type="color"] { width: 30px; height: 26px; flex: 0 0 auto; border: 1px solid var(--ui-line); border-radius: 5px; padding: 1px; background: #fff; }
   .colors input[type="text"] { flex: 1 1 auto; min-width: 0; font-family: "Roboto Mono", ui-monospace, monospace; text-transform: lowercase; }
   .colors input[type="text"].invalid { border-color: var(--warn); }
-
-  .slider-row { display: flex; align-items: center; gap: 10px; }
-  .slider-row input[type="range"] { flex: 1 1 auto; accent-color: var(--ui-accent); }
-  .slider-row output { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; color: var(--ui-ink); font-weight: 500; }
+  .eyedrop {
+    flex: 0 0 auto; width: 26px; height: 26px; padding: 0; border-radius: 5px;
+    border: 1px solid var(--ui-line); background: #fff; color: var(--ui-ink); cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .eyedrop:hover, .eyedrop:focus-visible { border-color: var(--ui-accent); color: var(--ui-accent); }
+  .eyedrop:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+  .eyedrop svg { width: 14px; height: 14px; fill: currentColor; }
+  body.no-eyedropper .eyedrop { display: none; }
 
   .btn {
     font: 500 13px/1 "Roboto", system-ui, sans-serif; border-radius: 6px; cursor: pointer;
@@ -288,20 +292,12 @@
         <legend>Farben</legend>
         <div class="swatches" id="themeSwatches" role="group" aria-label="Farbschema"></div>
         <div class="colors" id="customColors">
-          <label>Schrift<span class="colorpick"><input type="color" id="cFg"><input type="text" id="cFgHex" inputmode="text" maxlength="7" aria-label="Schriftfarbe als Hex-Code" placeholder="#000000"></span></label>
-          <label>Hintergrund<span class="colorpick"><input type="color" id="cBg"><input type="text" id="cBgHex" maxlength="7" aria-label="Hintergrundfarbe als Hex-Code" placeholder="#000000"></span></label>
-          <label>Balken<span class="colorpick"><input type="color" id="cAccent"><input type="text" id="cAccentHex" maxlength="7" aria-label="Balkenfarbe als Hex-Code" placeholder="#000000"></span></label>
-          <label>Warnung<span class="colorpick"><input type="color" id="cWarn"><input type="text" id="cWarnHex" maxlength="7" aria-label="Warnfarbe als Hex-Code" placeholder="#000000"></span></label>
+          <label>Schrift<span class="colorpick"><input type="color" id="cFg"><button type="button" class="eyedrop" data-pick="cFg" data-hex="cFgHex" aria-label="Farbe von der Folie übernehmen" title="Farbe von der Folie übernehmen"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12.9 1.1a2.6 2.6 0 0 1 0 3.7l-1 1 1.1 1.1-1.1 1.1-.6-.6-6 6-2.6.7.7-2.6 6-6-.6-.6 1.1-1.1L11 4.9l1-1a2.6 2.6 0 0 1 .9-2.8zM4.4 10.1l-.4 1.5 1.5-.4 5.6-5.6-1.1-1.1z"/></svg></button><input type="text" id="cFgHex" inputmode="text" maxlength="7" aria-label="Schriftfarbe als Hex-Code" placeholder="#000000"></span></label>
+          <label>Hintergrund<span class="colorpick"><input type="color" id="cBg"><button type="button" class="eyedrop" data-pick="cBg" data-hex="cBgHex" aria-label="Farbe von der Folie übernehmen" title="Farbe von der Folie übernehmen"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12.9 1.1a2.6 2.6 0 0 1 0 3.7l-1 1 1.1 1.1-1.1 1.1-.6-.6-6 6-2.6.7.7-2.6 6-6-.6-.6 1.1-1.1L11 4.9l1-1a2.6 2.6 0 0 1 .9-2.8zM4.4 10.1l-.4 1.5 1.5-.4 5.6-5.6-1.1-1.1z"/></svg></button><input type="text" id="cBgHex" maxlength="7" aria-label="Hintergrundfarbe als Hex-Code" placeholder="#000000"></span></label>
+          <label>Balken<span class="colorpick"><input type="color" id="cAccent"><button type="button" class="eyedrop" data-pick="cAccent" data-hex="cAccentHex" aria-label="Farbe von der Folie übernehmen" title="Farbe von der Folie übernehmen"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12.9 1.1a2.6 2.6 0 0 1 0 3.7l-1 1 1.1 1.1-1.1 1.1-.6-.6-6 6-2.6.7.7-2.6 6-6-.6-.6 1.1-1.1L11 4.9l1-1a2.6 2.6 0 0 1 .9-2.8zM4.4 10.1l-.4 1.5 1.5-.4 5.6-5.6-1.1-1.1z"/></svg></button><input type="text" id="cAccentHex" maxlength="7" aria-label="Balkenfarbe als Hex-Code" placeholder="#000000"></span></label>
+          <label>Warnung<span class="colorpick"><input type="color" id="cWarn"><button type="button" class="eyedrop" data-pick="cWarn" data-hex="cWarnHex" aria-label="Farbe von der Folie übernehmen" title="Farbe von der Folie übernehmen"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12.9 1.1a2.6 2.6 0 0 1 0 3.7l-1 1 1.1 1.1-1.1 1.1-.6-.6-6 6-2.6.7.7-2.6 6-6-.6-.6 1.1-1.1L11 4.9l1-1a2.6 2.6 0 0 1 .9-2.8zM4.4 10.1l-.4 1.5 1.5-.4 5.6-5.6-1.1-1.1z"/></svg></button><input type="text" id="cWarnHex" maxlength="7" aria-label="Warnfarbe als Hex-Code" placeholder="#000000"></span></label>
         </div>
-        <label class="check" style="margin-top:8px"><input type="checkbox" id="transparent"> Hintergrund transparent (falls PowerPoint das unterstützt)</label>
-        <div class="row" style="margin-top:8px">
-          <label for="opacity">Deckkraft gesamt</label>
-          <div class="slider-row">
-            <input type="range" id="opacity" min="0" max="100" step="10" value="100">
-            <output id="opacityOut" for="opacity">100 %</output>
-          </div>
-        </div>
-        <p class="hint">Blendet die ganze Anzeige – Schrift und Hintergrund zusammen – gleichmäßig ab. Unabhängig davon, ob PowerPoint einen transparenten Hintergrund unterstützt.</p>
+        <p class="hint">PowerPoint stellt Add-in-Inhalte immer auf einem eigenen, deckenden Untergrund dar – ein durchsichtiger Hintergrund ist technisch nicht möglich. Für einen nahtlosen Übergang die Hintergrundfarbe oben exakt auf die Folienfarbe setzen, am einfachsten mit der Pipette direkt auf einer leeren Stelle der Folie (wo verfügbar), sonst über Entwurf → Hintergrund formatieren → Weitere Farben ablesen.</p>
       </fieldset>
 
       <fieldset>
@@ -357,7 +353,7 @@
     dunkel: { name: "Dunkel", fg: "#F9F5EC", bg: "#1B2835", accent: "#7FB2D9", warn: "#FF8A7A" },
     blau:   { name: "Blau",   fg: "#FFFFFF", bg: "#236292", accent: "#F9F5EC", warn: "#FFD166" }
   };
-  const APP_VERSION = "1.2.0";
+  const APP_VERSION = "1.3.0";
   const DEFAULTS = {
     v: 1,
     mode: "clock",
@@ -374,8 +370,7 @@
     label: "",
     theme: "hell",
     fg: THEMES.hell.fg, bg: THEMES.hell.bg, accent: THEMES.hell.accent, warn: THEMES.hell.warn,
-    transparent: false,
-    opacity: 100,
+
     font: "roboto-condensed",
     weight: 500,
     italic: false,
@@ -637,9 +632,7 @@
     root.setProperty("--readout-font", (FONTS[state.font] || FONTS[DEFAULTS.font]).stack);
     root.setProperty("--readout-weight", String(state.weight));
     root.setProperty("--readout-style", state.italic ? "italic" : "normal");
-    document.documentElement.classList.toggle("transparent", !!state.transparent);
-    body.classList.toggle("transparent", !!state.transparent);
-    document.documentElement.style.opacity = String(Math.max(0, Math.min(100, +state.opacity)) / 100);
+
     body.dataset.align = state.align;
     ["clock", "countdown", "until", "stopwatch"].forEach((m) => body.classList.toggle("mode-" + m, state.mode === m));
     fontChanged();
@@ -650,7 +643,7 @@
   const fields = {
     clockSeconds: "checked", clockDate: "checked", durMin: "value", durSec: "value", untilTime: "value",
     warnSec: "value", overtime: "checked", sound: "checked", autostart: "checked", progressOn: "checked",
-    transparent: "checked", italic: "checked", font: "value", align: "value", opacity: "value",
+    italic: "checked", font: "value", align: "value",
     cFg: "value", cBg: "value", cAccent: "value", cWarn: "value"
   };
   const HEX_RE = /^#[0-9a-f]{6}$/i;
@@ -684,7 +677,6 @@
   function syncPanel() {
     Object.entries(fields).forEach(([id, prop]) => { const k = keyOf[id] || id; $(id)[prop] = state[k]; });
     hexPairs.forEach(([pickId, hexId]) => { $(hexId).value = $(pickId).value; $(hexId).classList.remove("invalid"); });
-    $("opacityOut").textContent = state.opacity + " %";
     labelInput.value = state.label;
     document.querySelectorAll("#modeSeg [data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
     document.querySelectorAll("#themeSwatches [data-theme]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.theme === state.theme)));
@@ -698,12 +690,11 @@
 
   function readPanel(e) {
     const id = e.target.id;
-    if (id === "opacity") { $("opacityOut").textContent = e.target.value + " %"; }
     if (e.target === labelInput) { state.label = labelInput.value; changed(); return; }
     if (!(id in fields)) return;
     const k = keyOf[id] || id, prop = fields[id];
     let v = e.target[prop];
-    if (["durationMin", "durationSec", "warnSec", "opacity"].includes(k)) v = Math.max(0, parseInt(v, 10) || 0);
+    if (["durationMin", "durationSec", "warnSec"].includes(k)) v = Math.max(0, parseInt(v, 10) || 0);
     if (k === "durationSec") v = Math.min(59, v);
     state[k] = v;
     if (k === "durationMin" || k === "durationSec") reset();
@@ -770,11 +761,24 @@
 
   /* ================= Ereignisse ================= */
   function wire() {
+    body.classList.toggle("no-eyedropper", !("EyeDropper" in window));
     el.gear.addEventListener("click", openPanel);
     $("btnDone").addEventListener("click", closePanel);
     $("btnPreview").addEventListener("click", () => setView("read"));
     el.panel.addEventListener("input", readPanel);
     el.panel.addEventListener("change", readPanel);
+    document.querySelectorAll(".eyedrop").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const pickId = btn.dataset.pick, hexId = btn.dataset.hex;
+        try {
+          const result = await new window.EyeDropper().open();
+          $(pickId).value = result.sRGBHex;
+          $(hexId).value = result.sRGBHex;
+          state[keyOf[pickId]] = result.sRGBHex;
+          applyLook(); saveState();
+        } catch (e) { /* Nutzer hat abgebrochen (Esc) */ }
+      });
+    });
     hexPairs.forEach(([pickId, hexId]) => {
       $(hexId).addEventListener("input", () => {
         let v = $(hexId).value.trim();

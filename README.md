@@ -77,7 +77,7 @@ Bis das Add-in in PowerPoint auftaucht, vergehen meist ein paar Stunden, im Extr
 
 **Schriften:** Systemschrift, Roboto Condensed, Roboto Mono, Roboto Slab, Roboto, Literata, Outfit – jeweils Light, Normal, Medium oder Bold, auf Wunsch kursiv. Roboto Slab und Outfit haben keine echte Kursive; dort wird schräg gestellt. Alle Ziffern stehen auf fester Breite, damit die Anzeige beim Zählen nicht wackelt.
 
-**Farben:** Vier fertige Schemata oder „Eigene“ mit freier Hex-Eingabe (`#236292` o. ä.) für Schrift, Hintergrund, Balken und Warnung – per Farbwähler oder direkt als Text eintippen. Zusätzlich zur Hintergrund-Transparenz gibt es einen Deckkraft-Regler (0–100 % in 10er-Schritten) für die komplette Anzeige, unabhängig davon, ob PowerPoint einen transparenten Hintergrund unterstützt.
+**Farben:** Vier fertige Schemata oder „Eigene“ mit freier Hex-Eingabe (`#236292` o. ä.) für Schrift, Hintergrund, Balken und Warnung – per Farbwähler, Text oder Pipette direkt von der Folie (siehe unten).
 
 ## Lokal ausprobieren
 
@@ -90,7 +90,7 @@ Bis das Add-in in PowerPoint auftaucht, vergehen meist ein paar Stunden, im Extr
 - **Folie verlassen und zurückkehren**: Ein laufender Countdown läuft weiter. Nach Ende der Präsentation wird zurückgesetzt.
 - **Signalton**: Browser erlauben Ton oft erst nach einer Interaktion. Bei Autostart ohne Klick kann der Ton stumm bleiben; ein Klick auf die Anzeige (Start) schaltet ihn frei.
 - **Tastatur**: Nach einem Klick in die Anzeige hat das Add-in den Fokus. Pfeiltasten/Leertaste gehen dann an das Add-in statt an die Präsentation – einmal neben die Anzeige auf die Folie klicken oder den Presenter nutzen.
-- **Transparenter Hintergrund** wird nicht in jeder PowerPoint-Version unterstützt. Alternativ Farbschema „Eigene“ mit der Folienfarbe.
+- **Kein durchsichtiger Hintergrund.** PowerPoint stellt Add-in-Inhalte immer auf einem eigenen, deckenden Untergrund dar, technisch ist das nicht zu umgehen. Passe stattdessen die Hintergrundfarbe unter „Eigene“ exakt an die Folie an. Am schnellsten geht das mit der Pipette neben dem Farbfeld: Klick darauf und wähle direkt eine leere Stelle der Folie. Die Pipette gibt es aktuell nur in Chromium-Browsern (PowerPoint unter Windows und im Web); erscheint sie nicht, z. B. am Mac, liest du die Farbe stattdessen über **Entwurf → Hintergrund formatieren → Weitere Farben** ab und trägst sie von Hand ein. Bei Verlaufs- oder Bildhintergründen gibt es ohnehin keine einzelne passende Farbe.
 - **Weitergabe der Datei**: Wer das Add-in nicht installiert hat, sieht statt der Live-Anzeige ein Standbild (Snapshot). Zum Präsentieren auf einem anderen Rechner das Add-in dort ebenfalls laden.
 
 ## Dateien
