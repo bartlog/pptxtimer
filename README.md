@@ -43,7 +43,25 @@ Einfügen → Add-Ins → Meine Add-Ins → *Mein Add-In hochladen* → `manifes
 3. Den Freigabepfad als Katalog-URL eintragen, „Katalog hinzufügen“, Häkchen bei „Im Menü anzeigen“, OK.
 4. PowerPoint neu starten → Einfügen → Add-Ins → Meine Add-Ins → Freigegebener Ordner → Folienuhr.
 
-**Für ein ganzes Microsoft-365-Team**: Über das Microsoft 365 Admin Center → Integrierte Apps lässt sich das Manifest zentral verteilen.
+## 2b. Für die ganze Organisation freigeben (Microsoft 365 Admin Center)
+
+Statt jedes Gerät einzeln einzurichten, lässt sich das Add-in einmal zentral bereitstellen. Es erscheint dann automatisch in PowerPoint auf allen Geräten der Nutzer, unter Windows, Mac und im Web, ohne lokale Manifest-Datei. Voraussetzung: ein Microsoft-365-Konto mit Admin-Rechten für den Mandanten.
+
+1. Im [Microsoft 365 Admin Center](https://admin.microsoft.com) links auf **Einstellungen → Integrierte Apps**.
+2. Unterhalb der vorgeschlagenen Apps auf **Benutzerdefinierte Apps hochladen** klicken (nicht die vorgeschlagenen Kacheln – die sind fremde Anbieter).
+3. App-Typ **Office-Add-In** wählen, dann **Link zur Manifestdatei angeben** und eintragen:
+   ```
+   https://bartlog.github.io/pptxtimer/manifest.xml
+   ```
+   Auf **Überprüfen** klicken – das Manifest wird direkt von GitHub Pages geladen und validiert.
+4. Bei **Benutzer** entweder „Nur ich“ oder bestimmte Personen/Gruppen wählen, je nachdem, wer Zugriff haben soll.
+5. Berechtigungen bestätigen und auf **Bereitstellen** klicken.
+
+Bis das Add-in in PowerPoint auftaucht, vergehen meist ein paar Stunden, im Extremfall bis zu 24. Es steht danach unter **Start → Add-Ins → Weitere Add-Ins → Vom Administrator verwaltet**.
+
+**Updates laufen automatisch mit.** Da das Manifest nur auf die GitHub-Pages-Adresse verweist, reicht es, `index.html` im Repository zu aktualisieren – die zentrale Bereitstellung im Admin Center muss dafür nicht angefasst werden. Nur wenn sich `manifest.xml` selbst ändert (Name, Icons, Adresse), muss der Upload im Admin Center wiederholt werden.
+
+**Aufräumen:** Wurde das Add-in vorher lokal oder über einen freigegebenen Ordner eingebunden (siehe Trust-Center-Weg oben), taucht es sonst doppelt auf. Die lokale Kopie bzw. den freigegebenen Ordner dann entfernen.
 
 ## 3. Benutzen
 
@@ -56,6 +74,8 @@ Einfügen → Add-Ins → Meine Add-Ins → *Mein Add-In hochladen* → `manifes
    - Maus bewegen: Knöpfe für Start/Pause, Zurücksetzen und +1 Minute erscheinen
 
 **Schriften:** Systemschrift, Roboto Condensed, Roboto Mono, Roboto Slab, Roboto, Literata, Outfit – jeweils Light, Normal, Medium oder Bold, auf Wunsch kursiv. Roboto Slab und Outfit haben keine echte Kursive; dort wird schräg gestellt. Alle Ziffern stehen auf fester Breite, damit die Anzeige beim Zählen nicht wackelt.
+
+**Farben:** Vier fertige Schemata oder „Eigene“ mit freier Hex-Eingabe (`#236292` o. ä.) für Schrift, Hintergrund, Balken und Warnung – per Farbwähler oder direkt als Text eintippen. Zusätzlich zur Hintergrund-Transparenz gibt es einen Deckkraft-Regler (0–100 % in 10er-Schritten) für die komplette Anzeige, unabhängig davon, ob PowerPoint einen transparenten Hintergrund unterstützt.
 
 ## Lokal ausprobieren
 

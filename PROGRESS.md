@@ -1,5 +1,10 @@
 # PROGRESS – Folienuhr (bartlog/pptxtimer)
 
+## Stand v1.2
+- Farben "Eigene": Hex-Textfelder neben den Farbwählern (Schrift/Hintergrund/Balken/Warnung), bidirektional synchron, ungültige Eingabe wird optisch markiert und nicht übernommen
+- Deckkraft-Regler 0–100 % (10er-Schritte) für das gesamte Element (opacity auf documentElement), unabhängig von der Hintergrund-Transparenz
+- README: Abschnitt 2b zur zentralen Bereitstellung über Microsoft 365 Admin Center → Integrierte Apps, mit Verweis auf die GitHub-Pages-Manifest-URL
+
 ## Stand v1.1
 - Hosting: https://bartlog.github.io/pptxtimer/ (Repo bartlog/pptxtimer)
 - Schriften: Systemschrift, Roboto Condensed, Roboto Mono, Roboto Slab, Roboto, Literata, Outfit (Google Fonts); Stärke 300/400/500/700; Kursiv (Slab/Outfit synthetisch)

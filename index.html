@@ -182,7 +182,14 @@
   .swatch:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
   .colors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
   .colors label { display: flex; flex-direction: column; gap: 3px; color: var(--ui-muted); font-size: 12px; }
-  .colors input[type="color"] { width: 100%; height: 26px; border: 1px solid var(--ui-line); border-radius: 5px; padding: 1px; background: #fff; }
+  .colorpick { display: flex; gap: 4px; }
+  .colors input[type="color"] { width: 30px; height: 26px; flex: 0 0 auto; border: 1px solid var(--ui-line); border-radius: 5px; padding: 1px; background: #fff; }
+  .colors input[type="text"] { flex: 1 1 auto; min-width: 0; font-family: "Roboto Mono", ui-monospace, monospace; text-transform: lowercase; }
+  .colors input[type="text"].invalid { border-color: var(--warn); }
+
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-row input[type="range"] { flex: 1 1 auto; accent-color: var(--ui-accent); }
+  .slider-row output { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; color: var(--ui-ink); font-weight: 500; }
 
   .btn {
     font: 500 13px/1 "Roboto", system-ui, sans-serif; border-radius: 6px; cursor: pointer;
@@ -280,12 +287,20 @@
         <legend>Farben</legend>
         <div class="swatches" id="themeSwatches" role="group" aria-label="Farbschema"></div>
         <div class="colors" id="customColors">
-          <label>Schrift<input type="color" id="cFg"></label>
-          <label>Hintergrund<input type="color" id="cBg"></label>
-          <label>Balken<input type="color" id="cAccent"></label>
-          <label>Warnung<input type="color" id="cWarn"></label>
+          <label>Schrift<span class="colorpick"><input type="color" id="cFg"><input type="text" id="cFgHex" inputmode="text" maxlength="7" aria-label="Schriftfarbe als Hex-Code" placeholder="#000000"></span></label>
+          <label>Hintergrund<span class="colorpick"><input type="color" id="cBg"><input type="text" id="cBgHex" maxlength="7" aria-label="Hintergrundfarbe als Hex-Code" placeholder="#000000"></span></label>
+          <label>Balken<span class="colorpick"><input type="color" id="cAccent"><input type="text" id="cAccentHex" maxlength="7" aria-label="Balkenfarbe als Hex-Code" placeholder="#000000"></span></label>
+          <label>Warnung<span class="colorpick"><input type="color" id="cWarn"><input type="text" id="cWarnHex" maxlength="7" aria-label="Warnfarbe als Hex-Code" placeholder="#000000"></span></label>
         </div>
         <label class="check" style="margin-top:8px"><input type="checkbox" id="transparent"> Hintergrund transparent (falls PowerPoint das unterstützt)</label>
+        <div class="row" style="margin-top:8px">
+          <label for="opacity">Deckkraft gesamt</label>
+          <div class="slider-row">
+            <input type="range" id="opacity" min="0" max="100" step="10" value="100">
+            <output id="opacityOut" for="opacity">100 %</output>
+          </div>
+        </div>
+        <p class="hint">Blendet die ganze Anzeige – Schrift und Hintergrund zusammen – gleichmäßig ab. Unabhängig davon, ob PowerPoint einen transparenten Hintergrund unterstützt.</p>
       </fieldset>
 
       <fieldset>
@@ -358,6 +373,7 @@
     theme: "hell",
     fg: THEMES.hell.fg, bg: THEMES.hell.bg, accent: THEMES.hell.accent, warn: THEMES.hell.warn,
     transparent: false,
+    opacity: 100,
     font: "roboto-condensed",
     weight: 500,
     italic: false,
@@ -621,6 +637,7 @@
     root.setProperty("--readout-style", state.italic ? "italic" : "normal");
     document.documentElement.classList.toggle("transparent", !!state.transparent);
     body.classList.toggle("transparent", !!state.transparent);
+    document.documentElement.style.opacity = String(Math.max(0, Math.min(100, +state.opacity)) / 100);
     body.dataset.align = state.align;
     ["clock", "countdown", "until", "stopwatch"].forEach((m) => body.classList.toggle("mode-" + m, state.mode === m));
     fontChanged();
@@ -631,8 +648,11 @@
   const fields = {
     clockSeconds: "checked", clockDate: "checked", durMin: "value", durSec: "value", untilTime: "value",
     warnSec: "value", overtime: "checked", sound: "checked", autostart: "checked", progressOn: "checked",
-    transparent: "checked", italic: "checked", font: "value", align: "value", cFg: "value", cBg: "value", cAccent: "value", cWarn: "value"
+    transparent: "checked", italic: "checked", font: "value", align: "value", opacity: "value",
+    cFg: "value", cBg: "value", cAccent: "value", cWarn: "value"
   };
+  const HEX_RE = /^#[0-9a-f]{6}$/i;
+  const hexPairs = [["cFg", "cFgHex"], ["cBg", "cBgHex"], ["cAccent", "cAccentHex"], ["cWarn", "cWarnHex"]];
   const keyOf = { durMin: "durationMin", durSec: "durationSec", progressOn: "progress", cFg: "fg", cBg: "bg", cAccent: "accent", cWarn: "warn" };
   const labelInput = document.querySelector('#panel [data-field="label"]');
 
@@ -661,6 +681,8 @@
 
   function syncPanel() {
     Object.entries(fields).forEach(([id, prop]) => { const k = keyOf[id] || id; $(id)[prop] = state[k]; });
+    hexPairs.forEach(([pickId, hexId]) => { $(hexId).value = $(pickId).value; $(hexId).classList.remove("invalid"); });
+    $("opacityOut").textContent = state.opacity + " %";
     labelInput.value = state.label;
     document.querySelectorAll("#modeSeg [data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
     document.querySelectorAll("#themeSwatches [data-theme]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.theme === state.theme)));
@@ -674,11 +696,12 @@
 
   function readPanel(e) {
     const id = e.target.id;
+    if (id === "opacity") { $("opacityOut").textContent = e.target.value + " %"; }
     if (e.target === labelInput) { state.label = labelInput.value; changed(); return; }
     if (!(id in fields)) return;
     const k = keyOf[id] || id, prop = fields[id];
     let v = e.target[prop];
-    if (["durationMin", "durationSec", "warnSec"].includes(k)) v = Math.max(0, parseInt(v, 10) || 0);
+    if (["durationMin", "durationSec", "warnSec", "opacity"].includes(k)) v = Math.max(0, parseInt(v, 10) || 0);
     if (k === "durationSec") v = Math.min(59, v);
     state[k] = v;
     if (k === "durationMin" || k === "durationSec") reset();
@@ -750,6 +773,21 @@
     $("btnPreview").addEventListener("click", () => setView("read"));
     el.panel.addEventListener("input", readPanel);
     el.panel.addEventListener("change", readPanel);
+    hexPairs.forEach(([pickId, hexId]) => {
+      $(hexId).addEventListener("input", () => {
+        let v = $(hexId).value.trim();
+        if (v && v[0] !== "#") v = "#" + v;
+        if (HEX_RE.test(v)) {
+          $(hexId).classList.remove("invalid");
+          $(pickId).value = v;
+          state[keyOf[pickId]] = v;
+          applyLook(); saveState();
+        } else {
+          $(hexId).classList.toggle("invalid", v.length > 0);
+        }
+      });
+      $(hexId).addEventListener("blur", () => { $(hexId).value = $(pickId).value; $(hexId).classList.remove("invalid"); });
+    });
     $("weightSeg").addEventListener("click", (e) => {
       const b = e.target.closest("[data-weight]"); if (!b) return;
       state.weight = +b.dataset.weight; changed();
