@@ -25,6 +25,8 @@ Repository: https://github.com/bartlog/pptxtimer · Add-in-Adresse: `https://bar
 
 **Updates:** Geänderte `index.html` einfach neu hochladen. Das Manifest musst du nur neu laden, wenn sich `manifest.xml` ändert. Zeigt PowerPoint noch die alte Version, PowerPoint neu starten; hilft das nicht, den Office-Cache leeren (Windows: `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`, Mac: `~/Library/Containers/com.microsoft.Powerpoint/Data/Library/Caches/`).
 
+**Woran du erkennst, ob eine Änderung angekommen ist:** Im Einstellungspanel steht oben immer die aktuelle Versionsnummer, z. B. „Folienuhr v1.2.0". Öffne dazu in PowerPoint das Zahnrad – steht dort die neue Nummer, läuft die neue `index.html`. Ein „yesterday" bei `manifest.xml` auf GitHub ist dabei normal und kein Fehlersignal: Diese Datei ändert sich nur, wenn sich Name, Icons oder Adresse ändern, nicht bei jedem Update der Anzeige selbst. GitHub setzt das Datum ohnehin nur, wenn sich der Dateiinhalt tatsächlich unterscheidet – ein erneuter Upload derselben Datei hinterlässt keinen neuen Commit.
+
 ## 2. In PowerPoint laden (Sideloading)
 
 Die Menünamen unterscheiden sich je nach PowerPoint-Version leicht.

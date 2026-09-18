@@ -230,6 +230,7 @@
 
   <form id="panel" onsubmit="return false" aria-label="Einstellungen">
     <div id="panelBody">
+      <p id="versionTag" class="hint" style="margin:0 0 10px">Folienuhr v<span id="versionNum"></span></p>
       <fieldset>
         <legend>Was soll angezeigt werden?</legend>
         <div class="seg" id="modeSeg" role="group" aria-label="Anzeige">
@@ -356,6 +357,7 @@
     dunkel: { name: "Dunkel", fg: "#F9F5EC", bg: "#1B2835", accent: "#7FB2D9", warn: "#FF8A7A" },
     blau:   { name: "Blau",   fg: "#FFFFFF", bg: "#236292", accent: "#F9F5EC", warn: "#FFD166" }
   };
+  const APP_VERSION = "1.2.0";
   const DEFAULTS = {
     v: 1,
     mode: "clock",
@@ -845,6 +847,7 @@
     inOffice = !!host;
     body.classList.toggle("browser", !inOffice);
     const hadSettings = loadState();
+    $("versionNum").textContent = APP_VERSION;
     buildSwatches(); wire(); applyLook(); syncPanel();
     loop();
 

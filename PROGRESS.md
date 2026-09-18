@@ -1,6 +1,8 @@
 # PROGRESS – Folienuhr (bartlog/pptxtimer)
 
-## Stand v1.2
+## Stand v1.2 (Manifest-Version 1.2.0.0)
+- Sichtbare Versionsnummer im Einstellungspanel (Konstante APP_VERSION in index.html), zur Kontrolle nach jedem Update ohne Umweg über GitHub-Zeitstempel
+- Konvention ab jetzt: bei inhaltlichen Änderungen an index.html sowohl APP_VERSION als auch <Version> in manifest.xml gemeinsam anheben
 - Farben "Eigene": Hex-Textfelder neben den Farbwählern (Schrift/Hintergrund/Balken/Warnung), bidirektional synchron, ungültige Eingabe wird optisch markiert und nicht übernommen
 - Deckkraft-Regler 0–100 % (10er-Schritte) für das gesamte Element (opacity auf documentElement), unabhängig von der Hintergrund-Transparenz
 - README: Abschnitt 2b zur zentralen Bereitstellung über Microsoft 365 Admin Center → Integrierte Apps, mit Verweis auf die GitHub-Pages-Manifest-URL
